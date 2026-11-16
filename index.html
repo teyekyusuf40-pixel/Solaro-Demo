@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Solaro Web Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#F28C28; --blue:#3584E4; --green:#3AA05A;
+  --win-bg:#fafafa; --win-fg:#28282e; --win-head:#f0f0f2; --win-line:#dedee2; --side:#f2f2f4; --muted:#6e6e76; --card:#fff;
+  --panel:#26262a; --panel2:#34343a;
+  --wall:linear-gradient(180deg,#18102e 0%,#5c2446 62%,#e8702c 100%);
+}
+body.dark{ --win-bg:#1e1e22; --win-fg:#ececf0; --win-head:#303034; --win-line:#141416; --side:#26262a; --muted:#a0a0a8; --card:#2a2a30; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,system-ui,sans-serif;background:#000;color:#fff;user-select:none;-webkit-user-select:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;outline:none}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+input,textarea{font:inherit;user-select:text;-webkit-user-select:text}
+.screen{position:fixed;inset:0;display:none}
+.screen.on{display:block}
+/* boot */
+#boot{background:#000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:70px}
+#boot.on{display:flex}
+#boot svg{width:200px;opacity:0;animation:fadein .6s .2s forwards}
+.dots{display:flex;gap:18px}
+.dots i{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.25;animation:pulse 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}.dots i:nth-child(4){animation-delay:.45s}.dots i:nth-child(5){animation-delay:.6s}
+@keyframes pulse{50%{opacity:1}}
+@keyframes fadein{to{opacity:1}}
+/* wallpaper */
+.wall{position:absolute;inset:0;background:var(--wall);transition:background .6s}
+.wall::after{content:"";position:absolute;left:0;right:0;bottom:0;height:50%;background:radial-gradient(ellipse 60% 70% at 62% 105%,rgba(255,196,120,.75),transparent 70%)}
+.blur .wall{filter:blur(30px) brightness(.65);transform:scale(1.1)}
+/* top bar */
+.topbar{position:absolute;top:0;left:0;right:0;height:36px;background:#000;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:5000;font-size:15px;font-weight:600}
+.ws{display:flex;gap:6px;align-items:center}.ws b{width:30px;height:12px;border-radius:6px;background:#eee}.ws i{width:8px;height:8px;border-radius:50%;background:#999}
+.pill{padding:4px 12px;border-radius:14px}
+.pill:hover,.pill.on{background:#46464c}
+.tray{display:flex;gap:12px;align-items:center}
+.tray svg{width:17px;height:17px}
+/* login / lock */
+.center-col{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.avatar{width:120px;height:120px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.pw{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:12px;padding:6px 6px 6px 14px;width:min(360px,86vw)}
+.pw input{flex:1;background:none;border:0;outline:0;color:#fff;font-size:18px;padding:8px 0}
+.pw input::placeholder{color:#ccc}
+.pw button{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);font-size:20px}
+.hint{color:#ddd;font-size:14px;opacity:.85;text-align:center;padding:0 20px}
+.bigclock{font-size:clamp(80px,18vw,150px);font-weight:800;letter-spacing:-2px;line-height:1}
+/* dock */
+.dock{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(24,22,30,.84);border-radius:24px;z-index:4000;max-width:calc(100vw - 12px);overflow-x:auto;scrollbar-width:none}
+.dock::-webkit-scrollbar{display:none}
+.dock .app{position:relative;width:58px;height:58px;flex:0 0 auto;border-radius:14px;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.dock .app:hover{background:rgba(255,255,255,.1)}
+.dock .app:active{transform:scale(.9)}
+.dock .app svg{width:48px;height:48px}
+.dock .app.running::after{content:"";position:absolute;bottom:-5px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.dock .sep{width:2px;height:44px;background:#5a5a62;margin:0 4px;flex:0 0 auto}
+/* windows */
+#windows{position:absolute;inset:36px 0 0 0}
+.win{position:absolute;background:var(--win-bg);color:var(--win-fg);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;min-width:300px;min-height:200px;animation:open .2s ease-out}
+@keyframes open{from{opacity:0;transform:scale(.93)}}
+.win.closing{animation:close .15s ease-in forwards}
+@keyframes close{to{opacity:0;transform:scale(.93)}}
+.win.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - 96px)!important;border-radius:0}
+.win.snapl{left:6px!important;top:6px!important;width:calc(50% - 9px)!important;height:calc(100% - 108px)!important}
+.win.snapr{left:calc(50% + 3px)!important;top:6px!important;width:calc(50% - 9px)!important;height:calc(100% - 108px)!important}
+.win.min{display:none}
+.head{height:48px;flex:0 0 48px;background:var(--win-head);border-bottom:1px solid var(--win-line);display:flex;align-items:center;justify-content:center;position:relative;font-weight:600;font-size:15px;touch-action:none;cursor:default}
+.head .title{pointer-events:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.head .left{position:absolute;left:10px;display:flex;gap:6px}
+.wbtns{position:absolute;right:10px;display:flex;gap:8px}
+.wbtns button{width:26px;height:26px;border-radius:50%;background:rgba(127,127,127,.18);display:flex;align-items:center;justify-content:center}
+.wbtns button:hover{background:rgba(127,127,127,.32)}
+.wbtns svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none}
+.body{flex:1;overflow:auto;position:relative}
+.hbtn{padding:6px 12px;border-radius:8px;font-weight:600;font-size:14px}
+.hbtn:hover,.hbtn.on{background:rgba(127,127,127,.18)}
+.snapprev{position:absolute;top:6px;bottom:96px;width:calc(50% - 9px);border-radius:14px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.45);display:none;z-index:3000;pointer-events:none}
+/* panels */
+.panel{position:absolute;top:44px;background:rgba(38,38,42,.97);border-radius:22px;box-shadow:0 18px 50px rgba(0,0,0,.5);z-index:6000;display:none;padding:18px;animation:drop .18s ease-out}
+.panel.on{display:block}
+@keyframes drop{from{opacity:0;transform:translateY(-12px)}}
+#qs{right:8px;width:min(400px,calc(100vw - 16px))}
+.slider{display:flex;align-items:center;gap:12px;margin:8px 4px 16px}
+.slider input{flex:1;accent-color:var(--blue)}
+.toggles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tg{display:flex;flex-direction:column;align-items:flex-start;padding:12px 16px;border-radius:30px;background:#40404a;text-align:left}
+.tg b{font-size:14px}.tg small{font-size:12px;color:#c8c8d0}
+.tg.on{background:var(--blue)}.tg.on small{color:#e6eeff}
+.qsfoot{display:flex;justify-content:space-between;margin-top:14px}
+.round{width:42px;height:42px;border-radius:50%;background:#40404a;display:flex;align-items:center;justify-content:center}
+.round svg{width:18px;height:18px}
+#cal{left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 16px))}
+#cal.on{animation:none}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:14px}
+.calgrid span{padding:7px 0;border-radius:50%}
+.calgrid .h{color:#a0a0a8;font-weight:600;font-size:12px}
+.calgrid .today{background:var(--accent);color:#fff;font-weight:700}
+.note{background:#34343a;border-radius:14px;padding:10px 12px;margin-top:8px;font-size:13px}
+.note b{display:block;font-size:14px}
+/* app grid */
+#grid{position:absolute;inset:36px 0 0 0;z-index:3500;display:none;flex-direction:column;align-items:center;padding:22px 16px 110px;overflow:auto}
+#grid.on{display:flex}
+#grid .bg{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);z-index:-1}
+#grid input{width:min(440px,90vw);padding:12px 20px;border-radius:24px;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:17px;outline:0}
+#grid input::placeholder{color:#ddd}
+.gridapps{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;width:min(1000px,100%);margin-top:28px}
+.gridapps button{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 6px;border-radius:18px;font-size:14px;animation:pop .25s ease-out backwards}
+.gridapps button:hover{background:rgba(255,255,255,.12)}
+.gridapps svg{width:76px;height:76px}
+@keyframes pop{from{opacity:0;transform:scale(.7) translateY(20px)}}
+/* toast */
+#toasts{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:7000;display:flex;flex-direction:column;gap:8px;width:min(440px,calc(100vw - 16px))}
+.toast{display:flex;gap:12px;align-items:center;background:rgba(36,36,40,.97);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:drop .25s ease-out}
+.toast svg{width:40px;height:40px;flex:0 0 auto}
+.toast b{display:block;font-size:15px}.toast span{font-size:13px;color:#bbb}
+#night{position:absolute;inset:0;background:rgba(255,140,40,.16);pointer-events:none;z-index:9000;opacity:0;transition:opacity .8s}
+#dim{position:absolute;inset:0;background:#000;pointer-events:none;z-index:9001;opacity:0}
+/* app specifics */
+.files{display:flex;height:100%}
+.files .side{width:200px;flex:0 0 200px;background:var(--side);padding:10px;border-right:1px solid var(--win-line);overflow:auto}
+.files .side button{display:flex;gap:10px;align-items:center;width:100%;padding:9px 10px;border-radius:8px;font-size:14px;text-align:left}
+.files .side button.on,.files .side button:hover{background:rgba(127,127,127,.16)}
+.files .side svg{width:18px;height:18px}
+.files .main{flex:1;padding:18px;overflow:auto}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.fgrid button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 4px;border-radius:12px;font-size:13px}
+.fgrid button:hover{background:rgba(53,132,228,.14)}
+.fgrid svg{width:64px;height:64px}
+.term{background:#1e1e20;color:#e6e6e6;font-family:"JetBrains Mono",monospace;font-size:14px;line-height:1.5;padding:12px;height:100%;overflow:auto;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text}
+.term .in{display:flex}.term input{flex:1;background:none;border:0;outline:0;color:#eee;font-family:inherit;font-size:inherit;padding:0}
+.g{color:#78dc6e;font-weight:700}.bl{color:#6ea0fa;font-weight:700}.o{color:var(--accent);font-weight:700}.dim{color:#999}
+.editor{width:100%;height:100%;border:0;outline:0;resize:none;padding:18px 22px;font-family:"JetBrains Mono",monospace;font-size:15px;line-height:1.6;background:var(--win-bg);color:var(--win-fg)}
+.pad{padding:22px}
+.h1{font-size:26px;font-weight:800;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.banner{border-radius:18px;padding:24px;background:linear-gradient(90deg,#f68c3c,#d65082);color:#fff;display:flex;gap:20px;align-items:center;margin-bottom:22px;flex-wrap:wrap}
+.banner svg{width:96px;height:96px}
+.btn{padding:10px 20px;border-radius:10px;background:var(--blue);color:#fff;font-weight:600}
+.btn.gray{background:rgba(127,127,127,.18);color:var(--win-fg)}
+.btn.white{background:#fff;color:#28282e}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.acard{background:var(--card);border:1px solid var(--win-line);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.acard svg{width:60px;height:60px}.acard small{color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:rgba(127,127,127,.25);overflow:hidden;width:100%}.bar i{display:block;height:100%;background:var(--blue);width:0}
+.set{display:flex;height:100%}
+.set .side{width:200px;flex:0 0 200px;background:var(--side);padding:10px;border-right:1px solid var(--win-line)}
+.set .side button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:8px;font-size:14px}
+.set .side button.on{background:rgba(127,127,127,.18)}
+.set .main{flex:1;padding:22px;overflow:auto}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 24px}
+.swatch{width:40px;height:40px;border-radius:50%;outline-offset:4px}
+.swatch.on{outline:3px solid currentColor}
+.wallpick{width:140px;height:80px;border-radius:10px;outline-offset:4px}
+.wallpick.on{outline:3px solid var(--accent)}
+.stylepick{width:150px;height:96px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:600;outline-offset:4px}
+.stylepick.on{outline:3px solid var(--accent)}
+.kv{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--win-line);font-size:15px}.kv span{color:var(--muted)}
+.music{display:flex;gap:24px;padding:24px;flex-wrap:wrap;align-items:center;background:#1e1e22;color:#eee;height:100%}
+.art{width:220px;height:220px;border-radius:16px;background:var(--wall);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.art svg{width:150px}
+.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px;height:100%;grid-template-rows:90px repeat(5,1fr);background:#2a2a30}
+.calc .disp{grid-column:1/-1;background:#1e1e22;color:#fff;border-radius:12px;font-size:38px;display:flex;align-items:center;justify-content:flex-end;padding:0 16px;font-weight:600;overflow:hidden}
+.calc button{background:#45454c;color:#fff;border-radius:12px;font-size:20px;font-weight:600}
+.calc button.op{background:#5a5a62}.calc button.eq{background:var(--accent)}
+.weather{background:linear-gradient(180deg,#468cdc,#96c8f0);color:#fff;height:100%;padding:24px;overflow:auto}
+.hours{display:flex;gap:10px;overflow-x:auto;background:rgba(255,255,255,.2);border-radius:16px;padding:14px;margin-top:18px}
+.hours div{flex:0 0 64px;text-align:center;font-size:14px}
+.monitor{background:#1e1e22;color:#eee;height:100%;padding:16px;overflow:auto}
+.monitor canvas{width:100%;height:150px;background:#18181b;border-radius:8px;display:block;margin:6px 0 16px}
+.browser .url{flex:1;max-width:460px;margin:0 auto;background:rgba(127,127,127,.15);border-radius:8px;padding:6px 12px;font-size:14px;text-align:center;color:var(--muted)}
+.start{display:flex;flex-direction:column;align-items:center;padding:50px 20px;gap:18px;text-align:center}
+.start input{width:min(520px,90%);padding:14px 22px;border-radius:30px;border:2px solid var(--win-line);background:var(--card);color:var(--win-fg);font-size:17px;outline:0}
+.result{max-width:640px;margin:0 auto 22px}.result a{color:#1a58c8;font-size:20px;font-weight:600;text-decoration:none;display:block;margin:4px 0}
+body.dark .result a{color:#7aaaff}
+
+/* grub */
+#grub{background:#000;color:#ccc;font-family:"JetBrains Mono",monospace}
+.grubin{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:16px}
+.gtitle{font-size:15px}
+.gbox{border:2px solid #bbb;width:min(760px,94vw);min-height:min(260px,46vh);padding:10px 0}
+.gbox button{display:block;width:100%;text-align:left;padding:6px 16px;font-family:inherit;font-size:15px;color:#ccc}
+.gbox button.sel{background:#ccc;color:#000}
+.ghelp{width:min(760px,94vw);font-size:13px;line-height:1.6;color:#999}
+/* boot details */
+.bootmsg{position:absolute;bottom:18%;color:#aaa;font-size:14px;text-align:center;width:100%;padding:0 20px}
+.bootlog{position:absolute;inset:0;background:#000;color:#ccc;font:13px/1.45 "JetBrains Mono",monospace;padding:14px;overflow:hidden;white-space:pre;display:none}
+.bootlog.on{display:block}
+.bootlog .ok{color:#5adc6e;font-weight:700}
+.boottoggle{position:absolute;bottom:16px;right:16px;color:#777;font-size:12px;padding:6px 10px;border-radius:8px;z-index:2}
+.boottoggle:hover{background:#222}
+/* installer */
+.inst{position:absolute;left:50%;top:calc(36px + max(8px,(100vh - 36px - min(660px,100vh - 52px))/2));transform:translateX(-50%);width:min(1000px,96vw);height:min(660px,calc(100vh - 52px));background:var(--win-bg);color:var(--win-fg);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;overflow:hidden;animation:open .3s ease-out}
+.isteps{width:220px;flex:0 0 220px;background:var(--side);border-right:1px solid var(--win-line);padding:18px 12px;overflow:auto}
+.isteps .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 6px 18px}
+.isteps .brand svg{width:34px}
+.isteps div.st{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:14px;color:var(--muted)}
+.isteps div.st i{width:10px;height:10px;border-radius:50%;background:#c8c8d0;flex:0 0 auto}
+.isteps div.st.done i{background:var(--green)}
+.isteps div.st.cur{background:rgba(127,127,127,.14);color:var(--win-fg);font-weight:600}
+.isteps div.st.cur i{background:var(--accent)}
+.ibody{flex:1;display:flex;flex-direction:column;min-width:0}
+.icontent{flex:1;overflow:auto;padding:26px 30px}
+.ifoot{display:flex;justify-content:space-between;padding:12px 22px;border-top:1px solid var(--win-line)}
+.btn:disabled{opacity:.45;cursor:default}
+.opt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border:2px solid var(--win-line);border-radius:12px;margin-bottom:10px;text-align:left;background:var(--card)}
+.opt.on{border-color:var(--blue);background:rgba(53,132,228,.08)}
+.opt small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.radio{width:20px;height:20px;border-radius:50%;border:2px solid #aaa;flex:0 0 auto;position:relative}
+.opt.on .radio{border-color:var(--blue)}.opt.on .radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--blue)}
+.fld{margin-bottom:14px}.fld label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.fld input,.fld select{width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(--win-line);background:var(--card);color:var(--win-fg);font-size:16px;outline:0}
+.fld input:focus{border-color:var(--blue)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lic{height:190px;overflow:auto;border:2px solid var(--win-line);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;background:var(--card);user-select:text;-webkit-user-select:text;margin-bottom:14px}
+.chk{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:15px;text-align:left}
+.chk .box{width:24px;height:24px;border-radius:6px;border:2px solid #aaa;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.chk.on .box{background:var(--blue);border-color:var(--blue)}.chk.on .box::after{content:"✓";color:#fff;font-weight:800;font-size:15px}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--win-line);font-size:15px}
+.sw{width:50px;height:28px;border-radius:14px;background:#c4c4ca;position:relative;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--blue)}.sw.on::after{left:25px}
+.diskbar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:10px 0 6px;font-size:12px;font-weight:600;color:#fff}
+.diskbar div{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
+.spin{width:18px;height:18px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.instlog{height:150px;overflow:auto;background:#1e1e22;color:#cfcfd4;font:12px/1.5 "JetBrains Mono",monospace;border-radius:10px;padding:10px;white-space:pre;margin-top:12px;display:none}
+.slide{display:flex;gap:18px;align-items:center;background:rgba(242,140,40,.1);border-radius:14px;padding:16px;margin:16px 0;min-height:96px}
+.slide svg{width:64px;height:64px;flex:0 0 auto}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+#rotate{position:fixed;inset:0;z-index:99999;background:#0e1424;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px}
+#rotate b{font-size:22px}#rotate span{color:#bbb;font-size:15px}
+@media (orientation:portrait) and (max-width:600px){ body:not(.rotok) #rotate{display:flex} }
+@media (max-height:520px){
+  .topbar{height:30px;font-size:13px}#windows{top:30px}#grid{top:30px}
+  .dock{bottom:4px;padding:5px 8px;border-radius:18px}.dock .app{width:42px;height:42px}.dock .app svg{width:36px;height:36px}.dock .sep{height:32px}
+  .win.max{height:calc(100% - 58px)!important}
+  .inst{top:34px;height:calc(100vh - 38px)}
+  .isteps{width:170px;flex-basis:170px;padding:10px 8px}.isteps div.st{padding:5px 8px;font-size:13px}
+  .icontent{padding:14px 18px}.h1{font-size:21px}.ifoot{padding:8px 14px}
+  .lic{height:110px}
+  #toasts{top:36px}
+  .panel{top:36px;max-height:calc(100vh - 44px);overflow:auto}
+}
+@media (max-width:640px){ .isteps{display:none} .two{grid-template-columns:1fr} }
+
+@media (max-width:700px){
+  .files .side,.set .side{display:none}
+  .topbar{font-size:13px}
+  .dock .app{width:50px;height:50px}.dock .app svg{width:42px;height:42px}
+}
+</style>
+</head>
+<body>
+<div id="grub" class="screen on"><div class="grubin">
+  <div class="gtitle">GNU GRUB  version 2.12</div>
+  <div class="gbox" id="gbox"></div>
+  <div class="ghelp">Use the &uarr; and &darr; keys (or tap) to select which entry is highlighted.<br>Press Enter (or tap again) to boot the selected entry.<br><span id="gcount"></span></div>
+</div></div>
+<div id="boot" class="screen"><svg id="bootlogo" viewBox="0 0 400 400"></svg><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="bootmsg" class="bootmsg"></div>
+  <div id="bootlog" class="bootlog"></div>
+  <button id="boottoggle" class="boottoggle">Show details</button></div>
+
+<div id="installer" class="screen blur">
+  <div class="wall"></div>
+  <div class="topbar"><div class="ws"><b></b><i></i><i></i></div><div class="clock pill"></div><div class="tray"></div></div>
+  <div class="inst">
+    <div class="isteps" id="isteps"></div>
+    <div class="ibody"><div class="icontent" id="icontent"></div>
+      <div class="ifoot" id="ifoot"><button class="btn gray" id="iback">Back</button><button class="btn" id="inext">Next</button></div></div>
+  </div>
+</div>
+<div id="rotate"><svg viewBox="0 0 100 100" width="90"><rect x="30" y="12" width="40" height="70" rx="8" fill="none" stroke="#fff" stroke-width="5"/><path d="M78 60a30 30 0 0 1-30 30" fill="none" stroke="#F28C28" stroke-width="5" stroke-linecap="round"/><path d="M46 84l4 6 6-4" fill="none" stroke="#F28C28" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <b>Turn your phone sideways</b><span>Solaro is a desktop system, so it looks best in landscape.</span><button class="btn" id="rotok">Continue anyway</button></div>
+
+<div id="login" class="screen blur">
+  <div class="wall"></div>
+  <div class="topbar"><div class="ws"><b></b><i></i><i></i></div><div class="clock pill"></div><div class="tray"></div></div>
+  <div class="center-col">
+    <div class="avatar"><svg viewBox="0 0 100 100" width="70"><circle cx="50" cy="34" r="17" fill="#fff"/><path d="M18 88a32 32 0 0 1 64 0z" fill="#fff"/></svg></div>
+    <div style="font-size:24px;font-weight:600" id="loginname">User</div>
+    <form class="pw" id="loginform"><input id="loginpw" type="password" placeholder="Password" autocomplete="off"><button aria-label="Log in">›</button></form>
+    <div class="hint" id="loginhint">Demo: type any password and press Enter.</div><button class="hint" id="loginreset" style="display:none;text-decoration:underline">Forgot your password? Reset the demo</button>
+  </div>
+</div>
+
+<div id="lock" class="screen blur">
+  <div class="wall"></div>
+  <div class="topbar"><div class="ws"><b></b><i></i><i></i></div><div class="clock pill"></div><div class="tray"></div></div>
+  <div class="center-col" id="lockinner">
+    <div class="bigclock" id="lockclock"></div>
+    <div style="font-size:26px;font-weight:600" id="lockdate"></div>
+    <div class="hint" style="position:absolute;bottom:40px">Tap or press a key to unlock</div>
+  </div>
+</div>
+
+<div id="desk" class="screen">
+  <div class="wall"></div>
+  <div class="topbar">
+    <div class="ws pill" id="actbtn" style="padding:8px 10px"><b></b><i></i><i></i></div>
+    <button class="clock pill" id="clockbtn"></button>
+    <button class="tray pill" id="traybtn"></button>
+  </div>
+  <div id="windows"><div class="snapprev" id="snapprev"></div></div>
+  <div id="grid"><div class="bg"></div><input id="gridsearch" placeholder="Search apps"><div class="gridapps" id="gridapps"></div></div>
+  <div class="dock" id="dock"></div>
+  <div class="panel" id="qs">
+    <div class="slider"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="#fff" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg><input type="range" min="0" max="100" value="70" id="vol"></div>
+    <div class="slider"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><input type="range" min="30" max="100" value="100" id="bright"></div>
+    <div class="toggles">
+      <button class="tg on" data-k="wifi"><b>Wi-Fi</b><small>Home_WiFi</small></button>
+      <button class="tg" data-k="bt"><b>Bluetooth</b><small>Off</small></button>
+      <button class="tg on" data-k="power"><b>Power Mode</b><small>Balanced</small></button>
+      <button class="tg" data-k="night"><b>Night Light</b><small>Off</small></button>
+      <button class="tg" data-k="dark"><b>Dark Style</b><small>Off</small></button>
+      <button class="tg" data-k="air"><b>Airplane Mode</b><small>Off</small></button>
+    </div>
+    <div class="qsfoot">
+      <button class="round" id="qsSettings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button>
+      <div style="display:flex;gap:10px">
+        <button class="round" id="qsLock" aria-label="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+        <button class="round" id="qsPower" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="panel" id="cal">
+    <div style="color:#aaa;font-size:14px" id="calday"></div>
+    <div style="font-size:21px;font-weight:700;margin-bottom:12px" id="calfull"></div>
+    <div class="calgrid" id="calgrid"></div>
+    <div style="margin-top:14px;font-weight:600;font-size:14px">Notifications</div>
+    <div id="notes"></div>
+  </div>
+  <div id="toasts"></div>
+</div>
+<div id="night"></div><div id="dim"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const ACC = ["#F28C28","#3584E4","#2190A4","#3A944A","#C88800","#E01B24","#D56199","#9141AC","#6F8396"];
+const WALLS = [
+  "linear-gradient(180deg,#18102e 0%,#5c2446 62%,#e8702c 100%)",
+  "linear-gradient(180deg,#0b1e2e 0%,#1d5a6e 60%,#5fd0a0 100%)",
+  "linear-gradient(180deg,#140f2e 0%,#3a2a7a 60%,#c36adf 100%)",
+  "linear-gradient(180deg,#1a1a1a 0%,#3a3a40 60%,#8a8a96 100%)"
+];
+const store = {get(k,d){try{const v=localStorage.getItem("solaro."+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("solaro."+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- logo ---------- */
+function logoSVG(sun, ink){
+  sun = sun||"var(--accent)"; ink = ink||"#ECEFF5";
+  let rays = "";
+  for (const a of [-72,-48,-24,0,24,48,72]) rays += `<line x1="200" y1="92" x2="200" y2="66" transform="rotate(${a} 200 240)" stroke="${sun}" stroke-width="16" stroke-linecap="round"/>`;
+  return `${rays}<path d="M84 240A116 116 0 0 1 316 240Z" fill="${sun}"/>
+  <line x1="49" y1="265" x2="351" y2="265" stroke="${ink}" stroke-width="18" stroke-linecap="round"/>
+  <line x1="100" y1="300" x2="300" y2="300" stroke="${ink}" stroke-width="16" stroke-linecap="round"/>
+  <line x1="149" y1="331" x2="251" y2="331" stroke="${ink}" stroke-width="14" stroke-linecap="round"/>`;
+}
+$("#bootlogo").innerHTML = logoSVG("#F28C28");
+
+/* ---------- icons (all original) ---------- */
+const IC = {
+ files:`<rect x="10" y="18" width="42" height="22" rx="6" fill="#c46a22"/><rect x="10" y="26" width="80" height="58" rx="8" fill="#e28632"/><rect x="10" y="34" width="80" height="52" rx="8" fill="#f6a846"/>`,
+ web:`<circle cx="50" cy="50" r="42" fill="#2c84de"/><circle cx="50" cy="50" r="36" fill="#46a0f0"/><g fill="none" stroke="#ebf5ff" stroke-width="4"><ellipse cx="50" cy="50" rx="18" ry="36"/><path d="M50 14v72M14 50h72M18 32q32 12 64 0M18 68q32-12 64 0"/></g>`,
+ terminal:`<rect x="8" y="12" width="84" height="76" rx="12" fill="#2e2e32"/><path d="M8 24a12 12 0 0 1 12-12h60a12 12 0 0 1 12 12v2H8z" fill="#4e4e54"/><path d="M22 40l14 12-14 12" stroke="#f0f0f0" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="42" y="61" width="24" height="6" rx="3" fill="#f0f0f0"/>`,
+ editor:`<rect x="18" y="8" width="64" height="84" rx="8" fill="#fafafa"/><g fill="#969ca6"><rect x="28" y="24" width="50" height="5" rx="2.5"/><rect x="28" y="36" width="44" height="5" rx="2.5"/><rect x="28" y="48" width="52" height="5" rx="2.5"/><rect x="28" y="60" width="30" height="5" rx="2.5"/><rect x="28" y="72" width="46" height="5" rx="2.5"/></g>`,
+ software:`<rect x="12" y="30" width="76" height="60" rx="10" fill="#F28C28"/><path d="M34 30a16 18 0 0 1 32 0" stroke="#c8641a" stroke-width="7" fill="none"/><circle cx="35" cy="49" r="5" fill="#fff"/><circle cx="65" cy="49" r="5" fill="#fff"/>`,
+ music:`<circle cx="50" cy="50" r="42" fill="#884cc4"/><g fill="#fff"><ellipse cx="36" cy="65" rx="8" ry="7"/><ellipse cx="64" cy="59" rx="8" ry="7"/><rect x="40" y="28" width="4" height="38"/><rect x="68" y="22" width="4" height="38"/><path d="M40 28l32-6v10l-32 6z"/></g>`,
+ photos:`<rect x="8" y="14" width="84" height="72" rx="10" fill="#34aa6e"/><path d="M14 80l26-36 20 36z" fill="#e8faee"/><path d="M40 80l24-28 22 28z" fill="#c8eed6"/><circle cx="70" cy="32" r="8" fill="#ffe278"/>`,
+ settings:`<circle cx="50" cy="50" r="42" fill="#6e7078"/><path fill="#ececf0" d="M50 18l6 8 10-3 2 10 10 4-4 9 6 8-8 6 1 10-10 1-5 9-8-6-8 6-5-9-10-1 1-10-8-6 6-8-4-9 10-4 2-10 10 3z"/><circle cx="50" cy="50" r="10" fill="#6e7078"/>`,
+ calendar:`<rect x="12" y="12" width="76" height="78" rx="10" fill="#fafafa"/><path d="M12 22a10 10 0 0 1 10-10h56a10 10 0 0 1 10 10v12H12z" fill="#e0403c"/><text x="50" y="76" font-size="34" font-weight="700" text-anchor="middle" fill="#28282e" font-family="Inter,sans-serif" class="calnum">16</text>`,
+ calculator:`<rect x="16" y="8" width="68" height="84" rx="10" fill="#3c3e44"/><rect x="24" y="16" width="52" height="16" rx="4" fill="#c8e6d2"/><g fill="#9698a0"><rect x="24" y="40" width="12" height="10" rx="3"/><rect x="42" y="40" width="12" height="10" rx="3"/><rect x="60" y="40" width="12" height="10" rx="3"/><rect x="24" y="56" width="12" height="10" rx="3"/><rect x="42" y="56" width="12" height="10" rx="3"/><rect x="60" y="56" width="12" height="10" rx="3"/><rect x="24" y="72" width="12" height="10" rx="3"/><rect x="42" y="72" width="12" height="10" rx="3"/></g><rect x="60" y="72" width="12" height="10" rx="3" fill="#F28C28"/>`,
+ weather:`<circle cx="50" cy="50" r="42" fill="#5aaaec"/><circle cx="42" cy="38" r="16" fill="#ffd65a"/><circle cx="43" cy="61" r="13" fill="#fff"/><circle cx="61" cy="55" r="15" fill="#fff"/><rect x="30" y="60" width="50" height="14" rx="7" fill="#fff"/>`,
+ monitor:`<rect x="8" y="14" width="84" height="72" rx="10" fill="#1e2228"/><path d="M16 64l16-10 12 12 14-30 12 14 14-20" stroke="#5adc82" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+ help:`<circle cx="50" cy="50" r="42" fill="#3c8cdc"/><text x="50" y="68" font-size="54" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter,sans-serif">?</text>`,
+ canvas:`<circle cx="50" cy="50" r="42" fill="#f6e6c8"/><circle cx="32" cy="30" r="8" fill="#e0403c"/><circle cx="54" cy="24" r="8" fill="#3584e4"/><circle cx="72" cy="40" r="8" fill="#3aa85a"/><circle cx="28" cy="54" r="8" fill="#f0b41e"/><circle cx="64" cy="68" r="10" fill="#fff"/>`,
+ chess:`<rect x="8" y="8" width="84" height="84" rx="14" fill="#34343a"/><circle cx="50" cy="32" r="10" fill="#f5f5f5"/><path d="M42 40h16l8 32H34z" fill="#f5f5f5"/><rect x="28" y="70" width="44" height="10" rx="3" fill="#f5f5f5"/>`,
+ notes:`<rect x="14" y="10" width="72" height="80" rx="10" fill="#fcd650"/><g fill="#aa8214"><rect x="26" y="30" width="48" height="4" rx="2"/><rect x="26" y="43" width="48" height="4" rx="2"/><rect x="26" y="56" width="48" height="4" rx="2"/><rect x="26" y="69" width="30" height="4" rx="2"/></g>`,
+ recorder:`<circle cx="50" cy="50" r="42" fill="#f0f0f4"/><circle cx="50" cy="50" r="22" fill="#e02832"/>`,
+ folder:`<rect x="6" y="16" width="42" height="20" rx="6" fill="#6ea0e2"/><rect x="6" y="24" width="88" height="62" rx="8" fill="#80b2f0"/><rect x="6" y="32" width="88" height="56" rx="8" fill="#96c4f8"/>`,
+ doc:`<path d="M24 8h36l20 20v60a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z" fill="#fafafa" stroke="#c8c8d0" stroke-width="3"/><path d="M60 8v20h20" fill="#e6e6ea"/><g fill="#a0a4ae"><rect x="30" y="44" width="40" height="4" rx="2"/><rect x="30" y="56" width="40" height="4" rx="2"/><rect x="30" y="68" width="26" height="4" rx="2"/></g>`,
+ showapps:`<g fill="#f0f0f0"><circle cx="29" cy="29" r="6"/><circle cx="50" cy="29" r="6"/><circle cx="71" cy="29" r="6"/><circle cx="29" cy="50" r="6"/><circle cx="50" cy="50" r="6"/><circle cx="71" cy="50" r="6"/><circle cx="29" cy="71" r="6"/><circle cx="50" cy="71" r="6"/><circle cx="71" cy="71" r="6"/></g>`
+};
+const svg = (n) => `<svg viewBox="0 0 100 100">${IC[n]||IC.doc}</svg>`;
+
+/* ---------- apps registry ---------- */
+const APPS = {
+  files:{name:"Files", w:900, h:560},
+  web:{name:"Web", w:980, h:620},
+  terminal:{name:"Terminal", w:760, h:470},
+  editor:{name:"Text Editor", w:760, h:520},
+  software:{name:"Software", w:960, h:620},
+  music:{name:"Music", w:720, h:340},
+  photos:{name:"Photos", w:900, h:580},
+  settings:{name:"Settings", w:900, h:600},
+  calendar:{name:"Calendar", w:420, h:520},
+  calculator:{name:"Calculator", w:340, h:500},
+  weather:{name:"Weather", w:760, h:520},
+  monitor:{name:"System Monitor", w:860, h:600},
+  help:{name:"Help", w:640, h:520},
+};
+const STORE_APPS = [["canvas","Canvas","Draw, paint and sketch."],["chess","Chess","Play against the computer."],["notes","Notes","Quick sticky notes."],["recorder","Recorder","Record sounds."]];
+for (const [k,n] of STORE_APPS) APPS[k] = {name:n, w:620, h:440, store:true};
+let installed = store.get("installed", []);
+const DOCK = ["files","web","terminal","editor","software","music","photos","settings"];
+
+/* ---------- clock ---------- */
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHSF=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const pad2=n=>String(n).padStart(2,"0");
+function tick(){
+  const d=new Date();
+  const s=`${MONTHS[d.getMonth()]} ${d.getDate()}  ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  document.querySelectorAll(".clock").forEach(e=>e.textContent=s);
+  $("#lockclock").textContent=`${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  $("#lockdate").textContent=`${DAYS[d.getDay()]}, ${MONTHSF[d.getMonth()]} ${d.getDate()}`;
+}
+setInterval(tick,1000); tick();
+const TRAY=`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="#fff"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path d="M17 9a4 4 0 0 1 0 6"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="7" width="18" height="10" rx="2"/><rect x="5" y="10" width="11" height="4" fill="#fff" stroke="none"/><path d="M22 11v2"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>`;
+document.querySelectorAll(".tray").forEach(e=>e.innerHTML=TRAY);
+
+/* ---------- screens ---------- */
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id)); if(id==="login") setTimeout(()=>$("#loginpw").focus(),50);}
+/* startup is handled by the boot sequence below */
+let deskReady=false;
+function enterDesk(){show("desk"); buildDock(); if(!deskReady){deskReady=true; setTimeout(()=>live?toast("software","You're trying Solaro","Nothing is installed yet. Tap the Solaro icon in the dock to install."):toast("software","Welcome to Solaro, "+(acct.name||"User"),"Try the apps in the dock."),600);} }
+function lock(){closePanels(); show("lock");}
+$("#lock").addEventListener("pointerdown",()=>show("login"));
+document.addEventListener("keydown",e=>{ if($("#lock").classList.contains("on")) show("login"); });
+$("#rotok").onclick=()=>document.body.classList.add("rotok");
+
+/* ---------- dock & grid ---------- */
+function buildDock(){
+  const dk=$("#dock"); dk.innerHTML="";
+  if(live){const b=document.createElement("button");b.className="app";b.title="Install Solaro";b.tabIndex=-1;b.onpointerdown=e=>e.preventDefault();b.innerHTML=`<svg viewBox="0 0 400 400" style="background:#0e1424;border-radius:12px">${logoSVG("#F28C28")}</svg>`;b.onclick=()=>{Object.keys(wins).forEach(k=>wins[k].close(true));openInstaller(1);};dk.appendChild(b);const sp=document.createElement("div");sp.className="sep";dk.appendChild(sp);}
+  for(const k of DOCK){const b=document.createElement("button");b.className="app";b.dataset.app=k;b.title=APPS[k].name;b.innerHTML=svg(k);b.tabIndex=-1;b.onpointerdown=e=>e.preventDefault();b.onclick=()=>dockClick(k);dk.appendChild(b);}
+  const sep=document.createElement("div");sep.className="sep";dk.appendChild(sep);
+  const g=document.createElement("button");g.className="app";g.title="Show Apps";g.innerHTML=svg("showapps");g.tabIndex=-1;g.onpointerdown=e=>e.preventDefault();g.onclick=()=>toggleGrid();dk.appendChild(g);
+  refreshRunning();
+}
+function refreshRunning(){document.querySelectorAll(".dock .app[data-app]").forEach(b=>b.classList.toggle("running",!!wins[b.dataset.app]));}
+function gridList(){return Object.keys(APPS).filter(k=>!APPS[k].store||installed.includes(k));}
+function renderGrid(q){
+  const box=$("#gridapps"); box.innerHTML=""; q=(q||"").toLowerCase(); let i=0;
+  for(const k of gridList()){ if(q && !APPS[k].name.toLowerCase().includes(q)) continue;
+    const b=document.createElement("button"); b.style.animationDelay=(i++*25)+"ms"; b.innerHTML=svg(k)+`<span>${APPS[k].name}</span>`;
+    b.onclick=()=>{toggleGrid(false);openApp(k);}; box.appendChild(b);}
+}
+function toggleGrid(force){const g=$("#grid");const on=typeof force==="boolean"?force:!g.classList.contains("on");closePanels();g.classList.toggle("on",on);if(on){$("#gridsearch").value="";renderGrid();}}
+$("#gridsearch").addEventListener("input",e=>renderGrid(e.target.value));
+$("#gridsearch").addEventListener("keydown",e=>{if(e.key==="Enter"){const f=$("#gridapps button");if(f)f.click();}});
+$("#grid .bg").onclick=()=>toggleGrid(false);
+$("#actbtn").onclick=()=>toggleGrid();
+
+/* ---------- panels ---------- */
+function closePanels(){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));document.querySelectorAll(".topbar .pill").forEach(p=>p.classList.remove("on"));}
+$("#traybtn").onclick=e=>{e.stopPropagation();const on=!$("#qs").classList.contains("on");closePanels();$("#qs").classList.toggle("on",on);$("#traybtn").classList.toggle("on",on);};
+$("#clockbtn").onclick=e=>{e.stopPropagation();const on=!$("#cal").classList.contains("on");closePanels();if(on){buildCal();$("#cal").classList.add("on");$("#clockbtn").classList.add("on");}};
+document.addEventListener("pointerdown",e=>{if(!e.target.closest(".panel")&&!e.target.closest(".topbar"))closePanels();});
+$("#qs").addEventListener("click",e=>e.stopPropagation());
+let notifications=[];
+function buildCal(){
+  const d=new Date(); $("#calday").textContent=DAYS[d.getDay()]; $("#calfull").textContent=`${MONTHSF[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
+  const first=new Date(d.getFullYear(),d.getMonth(),1).getDay(); const n=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  let h="SMTWTFS".split("").map(c=>`<span class="h">${c}</span>`).join(""); for(let i=0;i<first;i++)h+="<span></span>";
+  for(let i=1;i<=n;i++)h+=`<span class="${i===d.getDate()?"today":""}">${i}</span>`; $("#calgrid").innerHTML=h;
+  $("#notes").innerHTML=notifications.length?notifications.slice(-4).reverse().map(n=>`<div class="note"><b>${n[0]}</b>${n[1]}</div>`).join(""):`<div class="note" style="color:#aaa">No notifications</div>`;
+}
+const qsState={wifi:true,bt:false,power:true,night:false,dark:store.get("dark",false),air:false};
+const QSUB={wifi:["Off","Home_WiFi"],bt:["Off","On"],power:["Power Saver","Balanced"],night:["Off","On"],dark:["Off","On"],air:["Off","On"]};
+function applyQS(){document.querySelectorAll(".tg").forEach(t=>{const k=t.dataset.k;t.classList.toggle("on",qsState[k]);t.querySelector("small").textContent=QSUB[k][qsState[k]?1:0];});
+  document.body.classList.toggle("dark",qsState.dark); $("#night").style.opacity=qsState.night?1:0; store.set("dark",qsState.dark);
+  if(wins.settings) wins.settings.render();}
+document.querySelectorAll(".tg").forEach(t=>t.onclick=()=>{const k=t.dataset.k;qsState[k]=!qsState[k];if(k==="air"&&qsState.air){qsState.wifi=false;qsState.bt=false;}applyQS();});
+$("#bright").oninput=e=>$("#dim").style.opacity=(100-e.target.value)/100*0.8;
+$("#qsSettings").onclick=()=>{closePanels();openApp("settings");};
+$("#qsLock").onclick=lock;
+$("#qsPower").onclick=()=>{closePanels();Object.keys(wins).forEach(k=>wins[k].close(true));startGrub();};
+
+/* ---------- toasts ---------- */
+function toast(icon,title,body){notifications.push([title,body]);const t=document.createElement("div");t.className="toast";t.innerHTML=svg(icon)+`<div><b>${title}</b><span>${body}</span></div>`;$("#toasts").appendChild(t);setTimeout(()=>{t.style.transition="opacity .3s";t.style.opacity=0;setTimeout(()=>t.remove(),300)},3500);}
+
+/* ---------- accent / wallpaper ---------- */
+let accent=store.get("accent",0), wall=store.get("wall",0);
+function applyLook(){document.documentElement.style.setProperty("--accent",ACC[accent]);document.documentElement.style.setProperty("--wall",WALLS[wall]);store.set("accent",accent);store.set("wall",wall);}
+/* ---------- window manager ---------- */
+const wins={}; let z=10;
+applyLook(); applyQS(); const isPhone=()=>innerWidth<700||innerHeight<520;
+function openApp(k){
+  closePanels(); toggleGrid(false);
+  if(wins[k]){const w=wins[k];w.el.classList.remove("min");w.focus();return;}
+  const A=APPS[k]; const el=document.createElement("div"); el.className="win";
+  const area=$("#windows").getBoundingClientRect(); const n=Object.keys(wins).length;
+  const w=Math.min(A.w,area.width-20), h=Math.min(A.h,area.height-110);
+  el.style.width=w+"px"; el.style.height=h+"px";
+  el.style.left=Math.max(10,(area.width-w)/2+n*26-40)+"px"; el.style.top=Math.max(8,(area.height-96-h)/2+n*22-30)+"px";
+  el.innerHTML=`<div class="head"><div class="left"></div><span class="title">${A.name}</span><div class="wbtns">
+    <button data-a="min" aria-label="Minimize"><svg viewBox="0 0 12 12"><path d="M2 9h8"/></svg></button>
+    <button data-a="max" aria-label="Maximize"><svg viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8"/></svg></button>
+    <button data-a="close" aria-label="Close"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></button></div></div><div class="body"></div>`;
+  if(isPhone()) el.classList.add("max");
+  $("#windows").appendChild(el);
+  const W={el,head:el.querySelector(".head"),body:el.querySelector(".body"),left:el.querySelector(".head .left"),
+    setTitle(t){el.querySelector(".title").textContent=t},
+    focus(){el.style.zIndex=++z; if(W.onfocus) setTimeout(W.onfocus,0);},
+    close(now){if(W.onclose)W.onclose();delete wins[k];refreshRunning();if(now){el.remove();return;}el.classList.add("closing");setTimeout(()=>el.remove(),150);}};
+  wins[k]=W; W.focus(); el.addEventListener("pointerdown",()=>W.focus());
+  el.querySelector(".wbtns").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const a=b.dataset.a;
+    if(a==="close")W.close(); if(a==="min")el.classList.add("min"); if(a==="max"){el.classList.remove("snapl","snapr");el.classList.toggle("max");}});
+  W.head.addEventListener("dblclick",e=>{if(!e.target.closest("button")){el.classList.remove("snapl","snapr");el.classList.toggle("max");}});
+  drag(W);
+  (BUILD[k]||BUILD._store)(W,k);
+  refreshRunning();
+}
+function dockClick(k){const w=wins[k];if(w&&!w.el.classList.contains("min")&&+w.el.style.zIndex===z){w.el.classList.add("min");return;}openApp(k);}
+function drag(W){
+  let sx,sy,ox,oy,on=false,snap=null; const el=W.el, sp=$("#snapprev");
+  W.head.addEventListener("pointerdown",e=>{if(e.target.closest("button")||isPhone())return;on=true;
+    if(el.classList.contains("max")||el.classList.contains("snapl")||el.classList.contains("snapr")){const r=el.getBoundingClientRect();el.classList.remove("max","snapl","snapr");el.style.left=(e.clientX-parseFloat(el.style.width)/2)+"px";el.style.top=(r.top-36)+"px";}
+    sx=e.clientX;sy=e.clientY;ox=parseFloat(el.style.left);oy=parseFloat(el.style.top);W.head.setPointerCapture(e.pointerId);});
+  W.head.addEventListener("pointermove",e=>{if(!on)return;el.style.left=(ox+e.clientX-sx)+"px";el.style.top=Math.max(0,oy+e.clientY-sy)+"px";
+    snap=e.clientX<12?"l":(e.clientX>innerWidth-12?"r":null);sp.style.display=snap?"block":"none";if(snap)sp.style.left=snap==="l"?"6px":"calc(50% + 3px)";});
+  W.head.addEventListener("pointerup",()=>{if(!on)return;on=false;sp.style.display="none";if(snap)el.classList.add(snap==="l"?"snapl":"snapr");snap=null;});
+}
+
+/* ---------- apps ---------- */
+const BUILD={};
+const FS={Documents:["notes.txt","plan.txt","Solaro-roadmap.txt"],Downloads:["solaro-1.0.iso","wallpaper.png"],Desktop:[],Music:["Morning Light.ogg","First Light.ogg"],Pictures:["IMG_0421.jpg","IMG_0422.jpg","sunrise.png"],Templates:[],Videos:["trailer.mp4"],Public:[]};
+BUILD.files=(W)=>{
+  let cur=null;
+  W.body.innerHTML=`<div class="files"><div class="side"></div><div class="main"><div class="sub" id="fpath"></div><div class="fgrid"></div></div></div>`;
+  const side=W.body.querySelector(".side"), grid=W.body.querySelector(".fgrid"), path=W.body.querySelector("#fpath");
+  const items=["Home",...Object.keys(FS),"Trash"];
+  function render(){
+    side.innerHTML=items.map(i=>`<button class="${(cur||"Home")===i?"on":""}" data-i="${i}">${svg("folder")}${i}</button>`).join("");
+    path.textContent="Home"+(cur?" / "+cur:"");
+    W.left.innerHTML=cur?`<button class="hbtn" id="fback">‹ Back</button>`:"";
+    if(cur){const b=W.left.querySelector("#fback");b.onclick=()=>{cur=null;render();};}
+    if(!cur) grid.innerHTML=Object.keys(FS).map(f=>`<button data-f="${f}">${svg("folder")}${f}</button>`).join("");
+    else if(cur==="Trash"||!FS[cur]||!FS[cur].length) grid.innerHTML=`<div class="sub">This folder is empty.</div>`;
+    else grid.innerHTML=FS[cur].map(f=>`<button data-file="${f}">${svg(f.endsWith(".txt")?"doc":f.match(/png|jpg/)?"photos":f.match(/ogg/)?"music":f.match(/mp4/)?"terminal":"doc")}${f}</button>`).join("");
+  }
+  side.onclick=e=>{const b=e.target.closest("button");if(!b)return;cur=b.dataset.i==="Home"?null:b.dataset.i;render();};
+  grid.onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.f){cur=b.dataset.f;render();}
+    if(b.dataset.file){const f=b.dataset.file;if(f.endsWith(".txt"))openApp("editor");else if(f.match(/png|jpg/))openApp("photos");else if(f.match(/ogg/))openApp("music");else toast("files",f,"Preview isn't available in the web demo.");}};
+  render();
+};
+
+BUILD.terminal=(W)=>{
+  W.setTitle("user@solaro: ~");
+  W.body.innerHTML=`<div class="term"><div class="out"></div><div class="in"><span class="ps"></span><input autocomplete="off" autocapitalize="off" spellcheck="false"></div></div>`;
+  const term=W.body.querySelector(".term"), out=W.body.querySelector(".out"), inp=W.body.querySelector("input");
+  const PS=`<span class="g">user@solaro</span>:<span class="bl">~</span>$ `;
+  W.body.querySelector(".ps").innerHTML=PS;
+  const hist=[]; let hi=0, busy=false;
+  const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const print=h=>{out.insertAdjacentHTML("beforeend",h+"\n");term.scrollTop=term.scrollHeight;};
+  print(`Welcome to Solaro 1.0 (web demo). Type <span class="o">help</span> to see commands.`);
+  const ART=["      \\    |    /     ","   .   \\   |   /   . ","     .  .-'''-.  .   ","  ---- /       \\ ---- "," ===================  ","    ==============    ","        ======        "];
+  const slow=(lines,ms,done)=>{busy=true;let i=0;const s=()=>{if(i<lines.length){print(lines[i++]);setTimeout(s,ms);}else{busy=false;if(done)done();}};s();};
+  const CMDS={
+    help:()=>print(["Commands:","  help            show this list","  solarofetch     system info","  sudo apt update update package lists","  sudo apt install <app>  install an app (canvas, chess, notes, recorder)","  ls  pwd  whoami  date  uname -a  echo  cat notes.txt  clear","  open <app>      open an app (files, web, music, settings…)","  exit            close the terminal"].join("\n")),
+    ls:()=>print(Object.keys(FS).map(f=>`<span class="bl">${f}</span>`).join("  ")+"  notes.txt"),
+    pwd:()=>print("/home/user"), whoami:()=>print("user"), date:()=>print(new Date().toString()),
+    "uname -a":()=>print("Linux solaro 6.12.0-solaro #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux"),
+    "cat notes.txt":()=>print(esc(store.get("note",DEFAULT_NOTE))),
+    clear:()=>{out.innerHTML="";}, exit:()=>W.close(),
+    solarofetch:()=>{
+      const info=[`<span class="o">user@solaro</span>`,"-----------",["OS","Solaro 1.0 x86_64"],["Kernel","Linux 6.12.0-solaro"],["Uptime",Math.max(1,Math.round(performance.now()/60000))+" mins"],["Packages",(1842+installed.length)+" (dpkg)"],["Shell","bash 5.2.21"],["Desktop","Solaro Shell"],["Resolution",`${screen.width}x${screen.height}`],["Memory","2148MiB / 15872MiB"]];
+      const lines=[];for(let i=0;i<Math.max(ART.length,info.length);i++){const a=ART[i]||" ".repeat(22);const r=info[i];const rs=!r?"":typeof r==="string"?r:`<span class="o">${r[0]}</span>: ${r[1]}`;lines.push(`<span class="o">${esc(a)}</span>  ${rs}`);}print(lines.join("\n"));},
+    neofetch:()=>CMDS.solarofetch(),
+    "sudo apt update":()=>slow(["[sudo] password for user: ","Hit:1 solaro stable InRelease","Hit:2 solaro stable-updates InRelease","Hit:3 solaro stable-security InRelease","Reading package lists... Done","Building dependency tree... Done","Reading state information... Done","All packages are up to date."],170),
+  };
+  function run(cmd){
+    print(PS+esc(cmd)); cmd=cmd.trim(); if(!cmd)return;
+    hist.push(cmd); hi=hist.length;
+    if(CMDS[cmd])return CMDS[cmd]();
+    let m;
+    if((m=cmd.match(/^echo\s+(.*)$/)))return print(esc(m[1]));
+    if((m=cmd.match(/^open\s+(\w+)$/))){const k=m[1]==="browser"?"web":m[1];if(APPS[k]&&(!APPS[k].store||installed.includes(k))){openApp(k);return print("Opening "+APPS[k].name+"…");}return print("open: no such app: "+esc(m[1]));}
+    if((m=cmd.match(/^sudo apt install\s+(\w+)$/))){const k=m[1];if(!STORE_APPS.find(a=>a[0]===k))return print("E: Unable to locate package "+esc(k));
+      if(installed.includes(k))return print(k+" is already the newest version.");
+      return slow(["Reading package lists... Done","Building dependency tree... Done",`The following NEW packages will be installed:\n  ${k}`,`Get:1 solaro stable ${k} 1.0 [12.4 MB]`,`Unpacking ${k} (1.0) ...`,`Setting up ${k} (1.0) ...`,`<span class="g">Done.</span> Find ${APPS[k].name} in your apps.`],230,()=>installApp(k,true));}
+    if(cmd.startsWith("sudo"))return print("sudo: this command isn't available in the web demo.");
+    print(`${esc(cmd.split(" ")[0])}: command not found. Type <span class="o">help</span>.`);
+  }
+  inp.addEventListener("keydown",e=>{if(busy){e.preventDefault();return;}
+    if(e.key==="Enter"){const v=inp.value;inp.value="";run(v);}
+    if(e.key==="ArrowUp"&&hi>0){inp.value=hist[--hi];e.preventDefault();}
+    if(e.key==="ArrowDown"){inp.value=hi<hist.length-1?hist[++hi]:"";hi=Math.min(hi,hist.length);}
+    if(e.key==="l"&&e.ctrlKey){out.innerHTML="";e.preventDefault();}});
+  term.addEventListener("click",()=>inp.focus()); W.onfocus=()=>{if(!isPhone())inp.focus();}; setTimeout(()=>inp.focus(),60);
+};
+
+const DEFAULT_NOTE="Monday plan\n\n- Finish the Solaro trailer\n- Call the team at 3 pm\n- Try the new Canvas app\n\nIdea: a dark theme with warm orange accents.";
+BUILD.editor=(W)=>{
+  W.setTitle("notes.txt");
+  W.left.innerHTML=`<button class="hbtn" id="esave">Save</button>`;
+  W.body.innerHTML=`<textarea class="editor" spellcheck="false"></textarea>`;
+  const ta=W.body.querySelector("textarea"); ta.value=store.get("note",DEFAULT_NOTE);
+  ta.addEventListener("input",()=>W.setTitle("• notes.txt"));
+  const save=()=>{store.set("note",ta.value);W.setTitle("notes.txt");toast("editor","Document saved","notes.txt was saved to Documents.");};
+  W.left.querySelector("#esave").onclick=save;
+  ta.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();save();}});
+};
+
+function installApp(k,quiet){if(!installed.includes(k)){installed.push(k);store.set("installed",installed);}if(!quiet)toast(k,APPS[k].name+" is installed","Ready to use. Find it in your apps.");else toast(k,APPS[k].name+" is installed","Installed from the terminal.");if(wins.software)wins.software.render();}
+BUILD.software=(W)=>{
+  W.left.innerHTML=`<button class="hbtn on" data-t="explore">Explore</button><button class="hbtn" data-t="installed">Installed</button>`;
+  let tab="explore", busy={};
+  W.left.onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;W.left.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));W.render();};
+  W.render=()=>{
+    if(tab==="installed"){W.body.innerHTML=`<div class="pad"><div class="h1">Installed</div><p class="sub">${installed.length?"Apps you added from Software.":"Nothing installed yet."}</p><div class="cards">${installed.map(k=>`<div class="acard">${svg(k)}<b>${APPS[k].name}</b><button class="btn gray" data-rm="${k}">Remove</button></div>`).join("")}</div></div>`;}
+    else{
+      const btn=k=>installed.includes(k)?`<button class="btn gray" data-open="${k}">Open</button>`:busy[k]?`<div class="bar"><i id="bar-${k}"></i></div>`:`<button class="btn" data-inst="${k}">Install</button>`;
+      W.body.innerHTML=`<div class="pad"><div class="banner">${svg("canvas")}<div style="flex:1;min-width:180px"><div style="font-size:34px;font-weight:800">Canvas</div><div style="opacity:.9;margin:4px 0 14px">Draw, paint and sketch with ease.</div>${installed.includes("canvas")?`<button class="btn white" data-open="canvas">Open</button>`:busy.canvas?`<div class="bar" style="background:rgba(255,255,255,.35)"><i id="bar-canvas" style="background:#fff"></i></div>`:`<button class="btn" data-inst="canvas">Install</button>`}</div></div>
+      <div class="h1" style="font-size:21px;margin-bottom:12px">Popular apps</div><div class="cards">${STORE_APPS.slice(1).map(([k,n,d])=>`<div class="acard">${svg(k)}<b>${n}</b><small>${d}</small>${btn(k)}</div>`).join("")}</div></div>`;}
+  };
+  W.body.onclick=e=>{const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.inst){const k=b.dataset.inst;busy[k]=true;W.render();let p=0;const iv=setInterval(()=>{p+=4+Math.random()*8;const bar=document.getElementById("bar-"+k);if(bar)bar.style.width=Math.min(100,p)+"%";if(p>=100){clearInterval(iv);delete busy[k];installApp(k);}},120);}
+    if(b.dataset.open)openApp(b.dataset.open);
+    if(b.dataset.rm){installed=installed.filter(x=>x!==b.dataset.rm);store.set("installed",installed);if(wins[b.dataset.rm])wins[b.dataset.rm].close();W.render();}};
+  W.render();
+};
+BUILD._store=(W,k)=>{
+  if(k==="canvas"){W.body.innerHTML=`<canvas style="width:100%;height:100%;background:#fff;touch-action:none;display:block"></canvas>`;const c=W.body.querySelector("canvas");
+    W.left.innerHTML=["#28282e","#e0403c","#3584e4","#3aa85a","#F28C28"].map(col=>`<button class="hbtn" data-c="${col}"><span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${col}"></span></button>`).join("")+`<button class="hbtn" data-c="clear">Clear</button>`;
+    let col="#28282e";const fit=()=>{const r=c.getBoundingClientRect();if(r.width){c.width=r.width;c.height=r.height;}};setTimeout(fit,30);
+    const ctx=c.getContext("2d");let dn=false;
+    c.onpointerdown=e=>{dn=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);c.setPointerCapture(e.pointerId);};
+    c.onpointermove=e=>{if(!dn)return;ctx.lineTo(e.offsetX,e.offsetY);ctx.strokeStyle=col;ctx.lineWidth=4;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();};
+    c.onpointerup=()=>dn=false;
+    W.left.onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.c==="clear")ctx.clearRect(0,0,c.width,c.height);else col=b.dataset.c;};
+    return;}
+  W.body.innerHTML=`<div class="pad" style="text-align:center">${svg(k).replace("<svg","<svg style='width:110px'")}<div class="h1" style="margin-top:12px">${APPS[k].name}</div><p class="sub">This app is a placeholder in the web demo.</p></div>`;
+};
+
+BUILD.settings=(W)=>{
+  let page="Appearance";
+  const pages=["Wi-Fi","Bluetooth","Displays","Sound","Power","Appearance","Notifications","Apps","Privacy","About"];
+  W.render=()=>{
+    W.setTitle(page);
+    let main="";
+    if(page==="Appearance"){
+      main=`<div class="h1">Appearance</div><p class="sub">Change how Solaro looks.</p>
+      <b>Style</b><div class="row"><button class="stylepick ${!qsState.dark?"on":""}" style="background:#f2f2f4;color:#28282e" data-style="0">Default</button><button class="stylepick ${qsState.dark?"on":""}" style="background:#26262a;color:#eee" data-style="1">Dark</button></div>
+      <b>Accent color</b><div class="row">${ACC.map((c,i)=>`<button class="swatch ${i===accent?"on":""}" style="background:${c};color:${c}" data-acc="${i}" aria-label="Accent ${i+1}"></button>`).join("")}</div>
+      <b>Background</b><div class="row">${WALLS.map((w,i)=>`<button class="wallpick ${i===wall?"on":""}" style="background:${w}" data-wall="${i}" aria-label="Background ${i+1}"></button>`).join("")}</div>`;
+    } else if(page==="About"){
+      main=`<div style="text-align:center;margin-bottom:20px"><svg viewBox="0 0 400 400" style="width:130px">${logoSVG(null,qsState.dark?"#ECEFF5":"#28282e")}</svg><div class="h1">Solaro</div><p class="sub">A new dawn for your desktop.</p></div>
+      ${[["OS Name","Solaro 1.0 (web demo)"],["Kernel","Linux 6.12.0-solaro"],["Desktop","Solaro Shell"],["Memory","16 GB"],["Disk","512 GB (30 GB used by system)"],["Windowing","Wayland"]].map(([a,b])=>`<div class="kv"><span>${a}</span><b>${b}</b></div>`).join("")}<div style="margin-top:22px"><button class="btn gray" data-reset="1">Reset demo (start the installer again)</button></div>`;
+    } else main=`<div class="h1">${page}</div><p class="sub">These settings are not part of the web demo yet. Try Appearance or About.</p>`;
+    W.body.innerHTML=`<div class="set"><div class="side">${pages.map(p=>`<button class="${p===page?"on":""}" data-p="${p}">${p}</button>`).join("")}</div><div class="main">${main}</div></div>`;
+  };
+  W.body.onclick=e=>{const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.reset){resetDemo();return;}
+    if(b.dataset.p){page=b.dataset.p;}
+    if(b.dataset.acc){accent=+b.dataset.acc;applyLook();}
+    if(b.dataset.wall){wall=+b.dataset.wall;applyLook();}
+    if(b.dataset.style){qsState.dark=b.dataset.style==="1";applyQS();return;}
+    W.render();};
+  W.render();
+};
+
+let audioCtx=null;
+BUILD.music=(W)=>{
+  W.el.querySelector(".head").style.background="#2a2a2e";W.el.querySelector(".head").style.color="#eee";
+  W.body.innerHTML=`<div class="music"><div class="art"><svg viewBox="0 0 400 400">${logoSVG("#F28C28")}</svg></div><div style="flex:1;min-width:220px">
+   <div style="font-size:30px;font-weight:800">Morning Light</div><div style="color:#b4b4bc;font-size:18px">Solaro Sounds</div>
+   <div style="display:flex;align-items:center;gap:10px;margin:22px 0 6px;font-size:13px;color:#aaa"><span class="el">0:00</span><div class="bar" style="flex:1"><i class="prog" style="background:#eee"></i></div><span>0:32</span></div>
+   <div style="display:flex;gap:18px;align-items:center;justify-content:center;margin-top:16px"><button class="hbtn prev">⏮</button><button class="play" style="width:64px;height:64px;border-radius:50%;background:#f6f6f8;color:#222;font-size:24px">▶</button><button class="hbtn next">⏭</button></div>
+   <p style="color:#888;font-size:12px;text-align:center;margin-top:14px">A short tune made in your browser.</p></div></div>`;
+  let playing=false, start=0, pos=0, timer=null, nodes=[];
+  const LEN=32, notes=[440,554.37,659.25,880,659.25,554.37,493.88,587.33,739.99,987.77,739.99,587.33,392,493.88,587.33,783.99];
+  const playBtn=W.body.querySelector(".play"), bar=W.body.querySelector(".prog"), el=W.body.querySelector(".el");
+  function schedule(from){
+    try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();}catch(e){toast("music","Sound isn't available","Your browser blocked audio.");return false;}
+    audioCtx.resume&&audioCtx.resume();
+    const t0=audioCtx.currentTime-from, step=0.25, vol=+$("#vol").value/100*0.15;
+    for(let i=Math.ceil(from/step);i<LEN/step;i++){const tt=t0+i*step; const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type="triangle"; o.frequency.value=notes[i%16]*(i%32<16?1:0.75); g.gain.setValueAtTime(0,tt); g.gain.linearRampToValueAtTime(vol,tt+0.01); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.4);
+      o.connect(g).connect(audioCtx.destination); o.start(tt); o.stop(tt+0.45); nodes.push(o);}
+    return true;
+  }
+  function stop(){nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];clearInterval(timer);}
+  playBtn.onclick=()=>{if(!playing){if(!schedule(pos))return;playing=true;start=performance.now()/1000-pos;playBtn.textContent="❚❚";
+      if(!W.toasted){W.toasted=true;toast("music","Now Playing","Morning Light — Solaro Sounds");}
+      timer=setInterval(()=>{pos=performance.now()/1000-start;if(pos>=LEN){pos=0;playing=false;stop();playBtn.textContent="▶";}bar.style.width=(pos/LEN*100)+"%";el.textContent="0:"+pad2(Math.floor(pos));},200);}
+    else{playing=false;stop();playBtn.textContent="▶";}};
+  W.body.querySelector(".prev").onclick=()=>{pos=0;bar.style.width="0";el.textContent="0:00";if(playing){stop();schedule(0);start=performance.now()/1000;timer=setInterval(()=>{pos=performance.now()/1000-start;bar.style.width=(pos/LEN*100)+"%";el.textContent="0:"+pad2(Math.floor(pos));},200);}};
+  W.body.querySelector(".next").onclick=()=>toast("music","End of playlist","This demo has one song.");
+  W.onclose=stop;
+};
+
+function photoSVG(seed){let s=seed*9301+49297;const r=()=>((s=(s*9301+49297)%233280)/233280);
+  const c1=`hsl(${Math.floor(r()*360)},45%,${20+r()*15}%)`, c2=`hsl(${Math.floor(r()*360)},70%,${65+r()*15}%)`;
+  let m="";for(let l=0;l<3;l++){let p=`M0 200`;for(let k=0;k<=8;k++)p+=` L${k*37.5} ${110+l*28-r()*45}`;p+=" L300 200Z";m+=`<path d="${p}" fill="rgba(10,10,20,${0.35+l*0.2})"/>`;}
+  return `<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="300" height="200" fill="url(#g${seed})"/><circle cx="${60+r()*180}" cy="${50+r()*40}" r="${14+r()*14}" fill="#fff4d6"/>${m}</svg>`;}
+BUILD.photos=(W)=>{
+  W.el.querySelector(".head").style.background="#2a2a2e";W.el.querySelector(".head").style.color="#eee";
+  const grid=()=>{W.setTitle("Photos");W.left.innerHTML="";W.body.style.background="#1e1e22";W.body.innerHTML=`<div class="pad" style="color:#eee"><div class="h1">This month</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px">${Array.from({length:12},(_,i)=>`<button data-p="${i}" style="aspect-ratio:3/2;border-radius:8px;overflow:hidden;padding:0">${photoSVG(i+1)}</button>`).join("")}</div></div>`;};
+  W.body.onclick=e=>{const b=e.target.closest("button[data-p]");if(!b)return;const i=+b.dataset.p;W.setTitle(`IMG_04${21+i}.jpg`);W.left.innerHTML=`<button class="hbtn" style="color:#eee">‹ Back</button>`;W.left.firstChild.onclick=grid;
+    W.body.innerHTML=`<div style="height:100%;display:flex;align-items:center;justify-content:center;padding:10px;animation:open .25s">${photoSVG(i+1).replace("<svg","<svg style='width:100%;height:100%'")}</div>`;};
+  grid();
+};
+BUILD.calculator=(W)=>{
+  W.body.innerHTML=`<div class="calc"><div class="disp">0</div>${["C","±","%","÷","7","8","9","×","4","5","6","−","1","2","3","+","0",".","⌫","="].map(k=>`<button class="${"÷×−+".includes(k)?"op":k==="="?"eq":""}">${k}</button>`).join("")}</div>`;
+  const disp=W.body.querySelector(".disp"); let a=null, op=null, cur="0", fresh=false;
+  const fmt=n=>{if(!isFinite(n))return "Error";return String(+n.toPrecision(12));};
+  const calc=(x,y,o)=>o==="+"?x+y:o==="−"?x-y:o==="×"?x*y:y===0?NaN:x/y;
+  W.body.querySelector(".calc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.textContent;
+    if(/[0-9]/.test(k)){cur=(cur==="0"||fresh)?k:cur+k;fresh=false;}
+    else if(k==="."){if(fresh){cur="0";fresh=false;}if(!cur.includes("."))cur+=".";}
+    else if(k==="C"){a=null;op=null;cur="0";}
+    else if(k==="⌫"){cur=cur.length>1?cur.slice(0,-1):"0";}
+    else if(k==="±"){cur=fmt(-parseFloat(cur));}
+    else if(k==="%"){cur=fmt(parseFloat(cur)/100);}
+    else if(k==="="){if(op!==null&&a!==null){cur=fmt(calc(a,parseFloat(cur),op));a=null;op=null;fresh=true;}}
+    else{if(op!==null&&a!==null&&!fresh)cur=fmt(calc(a,parseFloat(cur),op));a=parseFloat(cur);op=k;fresh=true;}
+    disp.textContent=cur;};
+};
+BUILD.weather=(W)=>{
+  const h=new Date().getHours();
+  W.body.innerHTML=`<div class="weather"><div style="font-size:24px;font-weight:600">Amsterdam</div><div style="font-size:90px;font-weight:800;line-height:1.1">14°</div><div>Partly cloudy · H 16° L 9°</div>
+  <div class="hours">${Array.from({length:10},(_,i)=>`<div>${i?pad2((h+i)%24)+":00":"Now"}<svg viewBox="0 0 100 100" style="width:40px;display:block;margin:6px auto">${IC.weather}</svg><b>${14+Math.round(2*Math.sin(i/2))}°</b></div>`).join("")}</div>
+  <p style="opacity:.85;font-size:13px;margin-top:16px">Sample data — the web demo can't reach a weather service.</p></div>`;
+};
+BUILD.monitor=(W)=>{
+  W.el.querySelector(".head").style.background="#2a2a2e";W.el.querySelector(".head").style.color="#eee";
+  W.body.innerHTML=`<div class="monitor"><b>CPU</b><canvas class="c1"></canvas><b>Memory and Swap</b><canvas class="c2"></canvas><b>Network</b><canvas class="c3"></canvas><p style="color:#888;font-size:12px">Simulated values for the web demo.</p></div>`;
+  const cols=["#e0403c","#F28C28","#f0c832","#5ac864","#3cbec8","#3c82e6","#9a5ad2","#dc64aa"];
+  const series=[Array.from({length:8},()=>Array(60).fill(20)),[Array(60).fill(36)],[Array(60).fill(10),Array(60).fill(5)]];
+  const cvs=[...W.body.querySelectorAll("canvas")];
+  function draw(){cvs.forEach((c,ci)=>{const r=c.getBoundingClientRect();if(!r.width)return;c.width=r.width*devicePixelRatio;c.height=r.height*devicePixelRatio;const x=c.getContext("2d");x.scale(devicePixelRatio,devicePixelRatio);
+      x.strokeStyle="#2a2a30";for(let k=1;k<4;k++){x.beginPath();x.moveTo(0,r.height*k/4);x.lineTo(r.width,r.height*k/4);x.stroke();}
+      series[ci].forEach((s,si)=>{x.beginPath();s.forEach((v,i)=>{const px=i/(s.length-1)*r.width,py=r.height-v/100*r.height;i?x.lineTo(px,py):x.moveTo(px,py);});
+        x.strokeStyle=ci===1?"#9a5ad2":ci===2?(si?"#F28C28":"#3c82e6"):cols[si];x.lineWidth=2;x.stroke();
+        if(ci===1){x.lineTo(r.width,r.height);x.lineTo(0,r.height);x.fillStyle="rgba(154,90,210,.25)";x.fill();}});});}
+  const iv=setInterval(()=>{series[0].forEach(s=>{s.shift();s.push(Math.max(2,Math.min(95,s[s.length-1]+(Math.random()-.5)*18)));});
+    series[1][0].shift();series[1][0].push(34+Math.random()*4);series[2].forEach((s,i)=>{s.shift();s.push(Math.random()<.2?Math.random()*60/(i+1):s[s.length-1]*.7);});draw();},500);
+  setTimeout(draw,50); W.onclose=()=>clearInterval(iv);
+};
+BUILD.web=(W)=>{
+  W.left.innerHTML=`<button class="hbtn" id="wback">‹</button>`;
+  W.head.insertAdjacentHTML("beforeend","");
+  const home=()=>{W.setTitle("Start page");W.body.innerHTML=`<div class="start"><svg viewBox="0 0 400 400" style="width:110px">${logoSVG(null,qsState.dark?"#ECEFF5":"#c8c8d0")}</svg><div class="h1" style="font-size:36px">Good ${new Date().getHours()<12?"morning":new Date().getHours()<18?"afternoon":"evening"}.</div><form><input placeholder="Search the web"></form><p class="sub">Web demo: this browser can't load real websites.</p></div>`;
+    const f=W.body.querySelector("form");f.onsubmit=e=>{e.preventDefault();const q=f.querySelector("input").value.trim();if(q)results(q);};};
+  const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const results=q=>{W.setTitle("Search: "+q);W.body.innerHTML=`<div class="pad"><p class="sub">Sample results for “${esc(q)}”</p>${[["A simple guide to "+q,"Everything you need to know, explained simply."],["Top 10 tips about "+q,"Quick tips to get started today."],[q+" for beginners","Learn the basics in a few minutes."]].map(([t,d])=>`<div class="result"><small class="sub">example.org › article</small><a href="#" onclick="return false">${esc(t)}</a><div style="color:var(--muted)">${esc(d)}</div></div>`).join("")}</div>`;};
+  W.left.querySelector("#wback").onclick=home; home();
+};
+BUILD.calendar=(W)=>{
+  const d=new Date(), first=new Date(d.getFullYear(),d.getMonth(),1).getDay(), n=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  let h="SMTWTFS".split("").map(c=>`<span class="h">${c}</span>`).join("");for(let i=0;i<first;i++)h+="<span></span>";for(let i=1;i<=n;i++)h+=`<span class="${i===d.getDate()?"today":""}">${i}</span>`;
+  W.body.innerHTML=`<div class="pad"><div class="h1">${MONTHSF[d.getMonth()]} ${d.getFullYear()}</div><div class="calgrid" style="margin-top:14px">${h}</div><div class="kv" style="margin-top:20px"><span>15:00</span><b>Team call</b></div><div class="kv"><span>18:30</span><b>Gym</b></div></div>`;
+};
+BUILD.help=(W)=>{
+  W.body.innerHTML=`<div class="pad"><div class="h1">Welcome to the Solaro web demo</div><p class="sub">A quick tour of what you can try.</p>
+  ${[["Dock","Tap an app at the bottom to open it. Tap again to hide it."],["Show Apps","The 9-dot button shows all apps. Type to search."],["Windows","Drag the title bar to move. Drag to the left or right edge to snap. Double-click to maximize."],["Top bar","Tap the clock for the calendar and notifications. Tap the icons on the right for quick settings."],["Terminal","Try: help, solarofetch, sudo apt update, sudo apt install chess"],["Settings","Change dark style, accent color and background."]].map(([a,b])=>`<div class="kv" style="display:block"><b>${a}</b><div style="color:var(--muted);margin-top:4px">${b}</div></div>`).join("")}</div>`;
+};
+
+/* ===================== boot sequence & installer ===================== */
+let acct = store.get("acct", null);          // {name, user, host, hash}
+let live = false;
+async function hashPw(p){
+  try{ const b=await crypto.subtle.digest("SHA-256", new TextEncoder().encode("solaro:"+p)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  catch(e){ let h=0; for(const c of "solaro:"+p) h=(h*31+c.charCodeAt(0))|0; return "x"+h; }
+}
+function resetDemo(){ for(const k of ["acct","installed","note","accent","wall","dark"]) store.set(k,null); try{for(const k of Object.keys(localStorage)) if(k.startsWith("solaro.")) localStorage.removeItem(k);}catch(e){}
+  acct=null; installed=[]; accent=0; wall=0; qsState.dark=false; applyLook(); applyQS(); Object.keys(wins).forEach(k=>wins[k].close(true)); deskReady=false; startGrub(); }
+
+/* ---- GRUB ---- */
+let gTimer=null, gSel=0, gLeft=5, gEntries=[];
+function startGrub(){
+  closePanels(); show("grub");
+  gEntries = acct ? ["Solaro","Advanced options for Solaro","UEFI Firmware Settings"]
+                  : ["Try or Install Solaro","Solaro (safe graphics)","Test memory","Boot from next volume","UEFI Firmware Settings"];
+  gSel=0; gLeft=5; drawGrub(); clearInterval(gTimer);
+  gTimer=setInterval(()=>{gLeft--; drawGrub(); if(gLeft<=0) grubBoot();},1000);
+}
+function drawGrub(){
+  $("#gbox").innerHTML=gEntries.map((e,i)=>`<button class="${i===gSel?"sel":""}" data-i="${i}">${i===gSel?"*":" "}${e}</button>`).join("");
+  $("#gcount").textContent = gLeft>0 ? `The highlighted entry will be executed automatically in ${gLeft}s.` : "";
+}
+$("#gbox").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b)return; const i=+b.dataset.i; clearInterval(gTimer); gLeft=0;
+  if(i===gSel) grubBoot(); else {gSel=i; drawGrub();}});
+document.addEventListener("keydown",e=>{
+  if($("#grub").classList.contains("on")){
+    if(e.key==="ArrowDown"){gSel=(gSel+1)%gEntries.length;clearInterval(gTimer);gLeft=0;drawGrub();e.preventDefault();}
+    if(e.key==="ArrowUp"){gSel=(gSel+gEntries.length-1)%gEntries.length;clearInterval(gTimer);gLeft=0;drawGrub();e.preventDefault();}
+    if(e.key==="Enter"){grubBoot();e.preventDefault();}
+  } else if($("#boot").classList.contains("on") && e.key==="Escape"){ toggleBootLog(); }
+});
+function grubBoot(){
+  clearInterval(gTimer);
+  const name=gEntries[gSel];
+  if(/UEFI|Test memory|next volume/.test(name)){ $("#gcount").textContent=`"${name}" isn't available in the web demo. Choose another entry.`; return; }
+  bootSplash(acct ? "login" : "installer");
+}
+
+/* ---- long boot splash with optional details ---- */
+const BOOTLOG=[
+ "[    0.000000] Linux version 6.12.0-solaro (build@solaro) #1 SMP PREEMPT_DYNAMIC",
+ "[    0.000000] Command line: BOOT_IMAGE=/boot/vmlinuz-6.12.0-solaro root=UUID=8f3c quiet splash",
+ "[    0.004113] BIOS-provided physical RAM map:",
+ "[    0.112400] ACPI: Early table checksum verification disabled",
+ "[    0.240115] smpboot: CPU0: 64-bit x86 processor",
+ "[    0.388002] Memory: 16259504K/16696896K available",
+ "[    0.601943] PCI: Using configuration type 1 for base access",
+ "[    0.913471] nvme nvme0: 8/0/0 default/read/poll queues",
+ "[    1.204883] EXT4-fs (nvme0n1p2): mounted filesystem with ordered data mode",
+ "OK|Started Journal Service.","OK|Started Load Kernel Modules.","OK|Started Remount Root and Kernel File Systems.",
+ "OK|Started udev Kernel Device Manager.","OK|Reached target Local File Systems.","OK|Started Network Manager.",
+ "OK|Started Network Time Synchronization.","OK|Started Bluetooth service.","OK|Started Power Profiles daemon.",
+ "OK|Started Solaro Update Service.","OK|Started Login Service.","OK|Started Accounts Service.",
+ "OK|Reached target Multi-User System.","OK|Started Solaro Display Manager.","OK|Reached target Graphical Interface."];
+let bootT=null, bootStep=0;
+function bootSplash(next){
+  show("boot"); $("#bootlog").classList.remove("on"); $("#bootlog").innerHTML=""; $("#boottoggle").textContent="Show details";
+  const msgs = next==="installer" ? ["Starting Solaro…","Checking the USB drive…","Loading the live system…","Starting the installer…"]
+                                  : ["Starting Solaro…","Loading drivers…","Starting services…","Almost there…"];
+  bootStep=0; clearInterval(bootT);
+  const total=BOOTLOG.length; const dur=7200; const per=dur/total;
+  $("#bootmsg").textContent=msgs[0];
+  bootT=setInterval(()=>{
+    const l=BOOTLOG[bootStep];
+    $("#bootlog").insertAdjacentHTML("beforeend", (l.startsWith("OK|")?`[  <span class="ok">OK</span>  ] ${l.slice(3)}`:l)+"\n");
+    $("#bootlog").scrollTop=1e9;
+    $("#bootmsg").textContent=msgs[Math.min(msgs.length-1,Math.floor(bootStep/total*msgs.length))];
+    bootStep++;
+    if(bootStep>=total){clearInterval(bootT); setTimeout(()=>{ if(next==="installer") openInstaller(0); else showLogin(); },500);}
+  }, per);
+}
+function toggleBootLog(){const on=$("#bootlog").classList.toggle("on");$("#boottoggle").textContent=on?"Hide details":"Show details";}
+$("#boottoggle").onclick=toggleBootLog;
+
+/* ---- login with the password set during install ---- */
+function showLogin(){
+  live=false; show("login");
+  $("#loginname").textContent = acct ? acct.name : "User";
+  $("#loginhint").textContent = acct ? "Enter the password you chose during installation." : "Demo: type any password and press Enter.";
+  $("#loginreset").style.display = acct ? "block" : "none";
+}
+$("#loginreset").onclick=resetDemo;
+$("#loginform").addEventListener("submit",async e=>{
+  e.preventDefault(); const pw=$("#loginpw").value;
+  if(!pw){$("#loginpw").placeholder="Type your password";return;}
+  if(acct && (await hashPw(pw))!==acct.hash){
+    const f=$("#loginform"); f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake");
+    $("#loginhint").textContent="Wrong password. Try again."; $("#loginpw").value=""; return;
+  }
+  $("#loginpw").value=""; enterDesk();
+});
+
+/* ---- installer ---- */
+const ISTEPS=["Welcome","Keyboard","Wi-Fi","Terms","Disk","Account","Time Zone","Summary","Install"];
+const IS={step:0, lang:"English", kb:"English (US)", net:null, wifiPw:"", wifiState:"", skipWifi:false, accept:false, usage:false, loc:true, crash:true,
+  disk:"erase", name:"", host:"", user:"", pw:"", pw2:"", autologin:false, tz:"", hostTouched:false, userTouched:false};
+function openInstaller(step){
+  live=false; IS.step=step||0; show("installer");
+  try{ IS.tz = IS.tz || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch(e){ IS.tz="UTC"; }
+  renderInst();
+}
+const esc2=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function pwStrength(p){let s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[A-Z]/.test(p)&&/[a-z]/.test(p))s++;if(/\d/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;}
+function canNext(){
+  switch(IS.step){
+    case 2: return IS.wifiState==="ok"||IS.skipWifi;
+    case 3: return IS.accept;
+    case 5: return IS.name.trim() && IS.user && IS.host && IS.pw.length>=4 && IS.pw===IS.pw2;
+    default: return true;
+  }
+}
+function renderInst(){
+  $("#isteps").innerHTML=`<div class="brand"><svg viewBox="0 0 400 400">${logoSVG("#F28C28",qsState.dark?"#ECEFF5":"#28282e")}</svg>Install Solaro</div>`+
+    ISTEPS.map((n,i)=>`<div class="st ${i<IS.step?"done":i===IS.step?"cur":""}"><i></i>${n}</div>`).join("");
+  const c=$("#icontent"); let h="";
+  const foot=$("#ifoot"); foot.style.display="flex"; $("#iback").style.visibility=IS.step>0?"visible":"hidden";
+  let nextLabel="Next";
+  switch(IS.step){
+  case 0:
+    h=`<div style="text-align:center;margin:6px 0 18px"><svg viewBox="0 0 400 400" style="width:110px">${logoSVG("#F28C28",qsState.dark?"#ECEFF5":"#28282e")}</svg><div class="h1">Welcome to Solaro</div><p class="sub">Choose your language to get started.</p></div>
+      <div class="two">${["English","Türkçe","Deutsch","Español","Français","Italiano","Português","Nederlands"].map(l=>`<button class="opt ${IS.lang===l?"on":""}" data-lang="${l}"><span class="radio"></span>${l}</button>`).join("")}</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:10px"><button class="btn gray" data-try="1">Try Solaro first</button></div>`;
+    nextLabel="Install Solaro"; break;
+  case 1:
+    h=`<div class="h1">Keyboard layout</div><p class="sub">Pick the layout that matches your keyboard.</p>
+      ${["English (US)","English (UK)","Turkish (Q)","Turkish (F)","German","French"].map(k=>`<button class="opt ${IS.kb===k?"on":""}" data-kb="${k}"><span class="radio"></span>${k}</button>`).join("")}
+      <div class="fld" style="margin-top:14px"><label>Type here to test your keyboard</label><input placeholder="Test your keyboard"></div>`; break;
+  case 2: {
+    const nets=[["Home_WiFi",4,true],["Office-5G",3,true],["Cafe Guest",2,false],["Neighbor_2.4",1,true]];
+    h=`<div class="h1">Connect to Wi-Fi</div><p class="sub">Connect to get the latest updates while Solaro installs.</p>`+
+      nets.map(([n,sig,lock])=>{const sel=IS.net===n;
+        let extra="";
+        if(sel){ if(IS.wifiState==="ok") extra=`<div style="color:var(--green);font-weight:600;margin-top:8px">Connected ✓</div>`;
+          else if(IS.wifiState==="busy") extra=`<div style="margin-top:8px"><span class="spin"></span> Connecting…</div>`;
+          else if(lock) extra=`<div style="display:flex;gap:10px;margin-top:10px" class="wifipw"><input type="password" placeholder="Password" value="${esc2(IS.wifiPw)}" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid var(--win-line);background:var(--card);color:var(--win-fg);font-size:15px"><button class="btn" data-conn="1">Connect</button></div>${IS.wifiState==="bad"?'<div style="color:#e01b24;margin-top:6px;font-size:14px">The password must be at least 8 characters.</div>':""}`;
+          else extra=`<div style="margin-top:10px"><button class="btn" data-conn="1">Connect</button></div>`; }
+        return `<div class="opt ${sel?"on":""}" style="display:block;cursor:pointer" data-net="${n}"><div style="display:flex;align-items:center;gap:14px"><span style="font-family:monospace;letter-spacing:-2px">${"▂▄▆█".slice(0,sig)}<span style="opacity:.25">${"▂▄▆█".slice(sig)}</span></span><b style="flex:1">${n}</b>${lock?"🔒":""}</div>${extra}</div>`;}).join("")+
+      `<button class="chk ${IS.skipWifi?"on":""}" data-skip="1"><span class="box"></span>I don't want to connect right now</button>`; break; }
+  case 3:
+    h=`<div class="h1">Terms & Privacy</div><p class="sub">Please read and accept to continue.</p>
+      <div class="lic"><b>Solaro License</b><br>Solaro is free and open source software. You can use it, share it and change it under the terms of the GNU General Public License, version 3. Solaro comes with no warranty, to the extent permitted by law.<br><br><b>Privacy</b><br>Solaro does not sell your data. You don't need an online account to use your computer. Location services are off unless you turn them on. Crash reports are only sent if you allow it. You can change all of these later in Settings → Privacy.<br><br><b>Third-party software</b><br>Some apps and drivers have their own licenses. You can review them in Settings → About.</div>
+      <button class="chk ${IS.accept?"on":""}" data-acc="1"><span class="box"></span>I have read and accept the license terms</button>
+      <div class="trow"><span>Send anonymous usage data</span><button class="sw ${IS.usage?"on":""}" data-sw="usage" aria-label="Usage data"></button></div>
+      <div class="trow"><span>Use location to set the time zone</span><button class="sw ${IS.loc?"on":""}" data-sw="loc" aria-label="Location"></button></div>
+      <div class="trow"><span>Ask before sending crash reports</span><button class="sw ${IS.crash?"on":""}" data-sw="crash" aria-label="Crash reports"></button></div>`; break;
+  case 4:
+    h=`<div class="h1">Installation type</div><p class="sub">Disk 1 · 512 GB SSD</p>
+      <button class="opt ${IS.disk==="erase"?"on":""}" data-disk="erase"><span class="radio"></span><span><b>Erase disk and install Solaro</b><small>Deletes everything on the disk. Recommended for a fresh start.</small></span></button>
+      <button class="opt ${IS.disk==="along"?"on":""}" data-disk="along"><span class="radio"></span><span><b>Install alongside your other system</b><small>Keep your current system and choose at startup.</small></span></button>
+      <button class="opt ${IS.disk==="manual"?"on":""}" data-disk="manual"><span class="radio"></span><span><b>Something else</b><small>Create or resize partitions yourself.</small></span></button>
+      <div class="diskbar">${IS.disk==="erase"?`<div style="flex:30;background:var(--accent)">Solaro 30 GB</div><div style="flex:482;background:#8c8c96">Free space 482 GB</div>`:`<div style="flex:240;background:#3c6eb4">Current system 240 GB</div><div style="flex:30;background:var(--accent)">Solaro 30 GB</div><div style="flex:242;background:#8c8c96">Free 242 GB</div>`}</div>
+      <p class="sub" style="font-size:13px">Solaro needs about 30 GB. ${IS.disk==="erase"?'<b style="color:#e01b24">All files on this disk will be deleted.</b> (Demo: nothing is really deleted.)':"Nothing on your current system will be removed."}</p>`; break;
+  case 5: {
+    const s=pwStrength(IS.pw), col=s<2?"#e01b24":s<4?"#e0a020":"var(--green)", lbl=!IS.pw?"":s<2?"Weak password":s<4?"Okay password":"Strong password";
+    h=`<div class="h1">Create your account</div><p class="sub">You'll use this to log in to Solaro.</p>
+      <div class="two"><div class="fld"><label>Your name</label><input data-f="name" value="${esc2(IS.name)}" placeholder="Alex"></div>
+      <div class="fld"><label>Computer name</label><input data-f="host" value="${esc2(IS.host)}" placeholder="alex-pc"></div></div>
+      <div class="fld"><label>Username</label><input data-f="user" value="${esc2(IS.user)}" placeholder="alex" autocapitalize="off"></div>
+      <div class="two"><div class="fld"><label>Password</label><input type="password" data-f="pw" value="${esc2(IS.pw)}" autocomplete="new-password"></div>
+      <div class="fld"><label>Confirm password</label><input type="password" data-f="pw2" value="${esc2(IS.pw2)}" autocomplete="new-password"></div></div>
+      <div class="bar" style="height:8px"><i style="width:${IS.pw?Math.max(10,s/5*100):0}%;background:${col}"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px"><b style="color:${col}">${lbl}</b><b style="color:${IS.pw2&&IS.pw===IS.pw2?"var(--green)":"#e01b24"}">${IS.pw2?(IS.pw===IS.pw2?"Passwords match":"Passwords don't match"):""}</b></div>
+      <p class="sub" style="font-size:12px;margin-top:10px">Web demo: don't use a real password. It's only kept in this browser.</p>`; break; }
+  case 6: {
+    const zones=[...new Set([IS.tz,"Europe/Istanbul","Europe/London","Europe/Berlin","America/New_York","America/Los_Angeles","Asia/Tokyo","UTC"])];
+    h=`<div class="h1">Time zone</div><p class="sub">${IS.loc?"Detected from this device.":"Choose where you are."}</p>
+      <div class="fld"><label>Time zone</label><select data-f="tz">${zones.map(z=>`<option ${z===IS.tz?"selected":""}>${z}</option>`).join("")}</select></div>
+      <div class="note" style="background:rgba(127,127,127,.12);color:var(--win-fg)">Current time: <b>${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</b></div>`; break; }
+  case 7:
+    h=`<div class="h1">Ready to install</div><p class="sub">Check your choices. Go back to change anything.</p>
+      ${[["Language",IS.lang],["Keyboard",IS.kb],["Wi-Fi",IS.wifiState==="ok"?IS.net:"Not connected"],["Disk",IS.disk==="erase"?"Erase disk and install (512 GB SSD)":IS.disk==="along"?"Install alongside other system":"Manual partitioning"],["Account",`${esc2(IS.name)} (${esc2(IS.user)})`],["Computer name",esc2(IS.host)],["Time zone",IS.tz],["Size",IS.disk==="manual"?"About 30 GB":"About 30 GB"]].map(([a,b])=>`<div class="kv"><span>${a}</span><b>${b}</b></div>`).join("")}`;
+    nextLabel="Install"; break;
+  case 8:
+    foot.style.display="none";
+    h=`<div class="h1">Installing Solaro</div><p class="sub" id="istage">Preparing…</p>
+      <div class="bar" style="height:10px"><i id="iprog" style="background:var(--accent)"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;color:var(--muted)"><span id="ipct">0%</span><span id="ieta"></span></div>
+      <div class="slide" id="islide"></div>
+      <button class="hbtn" id="ilogbtn">Show details</button><div class="instlog" id="ilog"></div>`; break;
+  case 9:
+    h=`<div style="text-align:center;padding-top:10px"><div style="width:110px;height:110px;border-radius:50%;background:var(--green);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;animation:pop .4s"><svg viewBox="0 0 24 24" width="60" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+      <div class="h1">All done!</div><p class="sub">Solaro is installed on your computer.</p>
+      <div style="display:inline-block;background:rgba(58,160,90,.14);color:var(--green);font-weight:700;padding:8px 18px;border-radius:20px;margin-bottom:14px">Installed size: 30 GB</div>
+      <p class="sub">Remove the USB drive, then restart to start using Solaro.</p></div>`;
+    $("#iback").style.visibility="hidden"; nextLabel="Restart now"; break;
+  }
+  c.innerHTML=h; c.scrollTop=0;
+  $("#inext").textContent=nextLabel; $("#inext").disabled=!canNext();
+  if(IS.step===8) runInstall();
+}
+// field typing without full re-render (keeps focus)
+$("#icontent").addEventListener("input",e=>{
+  const f=e.target.dataset.f;
+  if(e.target.closest(".wifipw")){IS.wifiPw=e.target.value;return;}
+  if(!f) return;
+  IS[f]=e.target.value;
+  if(f==="name"){ const base=IS.name.trim().split(/\s+/)[0]||""; const u=base.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g,"");
+    if(!IS.userTouched){IS.user=u; const el=$('#icontent [data-f="user"]'); if(el) el.value=u;}
+    if(!IS.hostTouched){IS.host=u?u+"-pc":""; const el=$('#icontent [data-f="host"]'); if(el) el.value=IS.host;} }
+  if(f==="user"){IS.userTouched=true; IS.user=IS.user.toLowerCase().replace(/[^a-z0-9_-]/g,""); if(e.target.value!==IS.user) e.target.value=IS.user;}
+  if(f==="host") IS.hostTouched=true;
+  if(f==="pw"||f==="pw2"){ // update meter in place
+    const pos=e.target.selectionStart; renderInst(); const el=$(`#icontent [data-f="${f}"]`); if(el){el.focus(); try{el.setSelectionRange(pos,pos);}catch(_){}} return; }
+  $("#inext").disabled=!canNext();
+});
+$("#icontent").addEventListener("change",e=>{ if(e.target.dataset.f==="tz"){IS.tz=e.target.value;} });
+$("#icontent").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.closest(".wifipw")){e.preventDefault();connectWifi();} });
+function connectWifi(){ if(IS.wifiPw.length<8){IS.wifiState="bad";renderInst();return;} IS.wifiState="busy"; renderInst(); setTimeout(()=>{IS.wifiState="ok";renderInst();},1300); }
+$("#icontent").addEventListener("click",e=>{
+  const b=e.target.closest("[data-lang],[data-kb],[data-net],[data-conn],[data-skip],[data-acc],[data-sw],[data-disk],[data-try],#ilogbtn"); if(!b) return;
+  if(b.dataset.try){ live=true; IS.step=0; enterDesk(); return; }
+  if(b.id==="ilogbtn"){const l=$("#ilog");const on=l.style.display!=="block";l.style.display=on?"block":"none";b.textContent=on?"Hide details":"Show details";return;}
+  if(b.dataset.lang) IS.lang=b.dataset.lang;
+  if(b.dataset.kb) IS.kb=b.dataset.kb;
+  if(b.dataset.conn){ e.stopPropagation(); const n=IS.net; const lock=n!=="Cafe Guest"; if(!lock){IS.wifiState="busy";renderInst();setTimeout(()=>{IS.wifiState="ok";renderInst();},900);return;} connectWifi(); return; }
+  if(b.dataset.net){ if(e.target.closest(".wifipw")) return; if(IS.net!==b.dataset.net){IS.net=b.dataset.net; IS.wifiState=""; IS.wifiPw=""; IS.skipWifi=false;} }
+  if(b.dataset.skip){ IS.skipWifi=!IS.skipWifi; }
+  if(b.dataset.acc) IS.accept=!IS.accept;
+  if(b.dataset.sw) IS[b.dataset.sw]=!IS[b.dataset.sw];
+  if(b.dataset.disk) IS.disk=b.dataset.disk;
+  renderInst();
+});
+$("#iback").onclick=()=>{ if(IS.step>0&&IS.step<8){IS.step--;renderInst();} };
+$("#inext").onclick=async()=>{
+  if(!canNext()) return;
+  if(IS.step===9){ live=false; startGrub(); return; }
+  if(IS.step===7){ acctPending={name:IS.name.trim(),user:IS.user,host:IS.host,hash:await hashPw(IS.pw)}; IS.pw=""; IS.pw2=""; }
+  IS.step++; renderInst();
+};
+let acctPending=null, instT=null;
+const SLIDES=[["software","Thousands of apps","Find apps in Software and install them with one click."],["settings","Make it yours","Pick a dark style, an accent color and a wallpaper."],["terminal","Linux at its heart","Open the terminal any time. Try solarofetch."],["music","Ready to play","Music, Photos and Videos are already installed."],["files","Your files, organized","Documents, Downloads and Pictures are ready for you."]];
+const PKGS=["linux-image-6.12.0-solaro","systemd","network-manager","solaro-shell","solaro-settings","solaro-files","solaro-terminal","solaro-software","pipewire","mesa-vulkan-drivers","fonts-inter","solaro-wallpapers","solaro-music","solaro-photos","grub-efi-amd64"];
+function runInstall(){
+  clearInterval(instT);
+  const T0=performance.now(), DUR=18000; let si=-1, pi=0;
+  const stages=[[0,"Partitioning the disk…"],[0.08,"Copying files…"],[0.45,"Installing the system…"],[0.7,"Setting up apps…"],[0.85,"Configuring your account…"],[0.95,"Installing the boot loader…"]];
+  instT=setInterval(()=>{
+    if(!$("#iprog")){clearInterval(instT);return;}
+    const p=Math.min(1,(performance.now()-T0)/DUR);
+    $("#iprog").style.width=(p*100)+"%"; $("#ipct").textContent=Math.floor(p*100)+"%";
+    const left=Math.ceil((1-p)*DUR/1000); $("#ieta").textContent=p<1?`About ${left} seconds left (demo speed)`:"";
+    $("#istage").textContent=[...stages].reverse().find(s=>p>=s[0])[1];
+    const ns=Math.floor(p*SLIDES.length*0.999);
+    if(ns!==si){si=ns;const [ic,t,d]=SLIDES[si];$("#islide").innerHTML=`${svg(ic)}<div><b style="font-size:17px">${t}</b><div style="color:var(--muted);margin-top:4px">${d}</div></div>`;}
+    while(pi<Math.floor(p*PKGS.length)){ $("#ilog").textContent+=`Unpacking ${PKGS[pi]} …\nSetting up ${PKGS[pi]} …\n`; $("#ilog").scrollTop=1e9; pi++; }
+    if(p>=1){clearInterval(instT); acct=acctPending; store.set("acct",acct); setTimeout(()=>{IS.step=9;renderInst();},600);}
+  },100);
+}
+
+/* ---- start ---- */
+startGrub();
+</script>
+</body>
+</html>
